@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Upload</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- external javascript -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- api gateway generated sdk -->
+  <script src="./assets/js/sdk/lib/axios/dist/axios.standalone.js"></script>
+  <script src="./assets/js/sdk/lib/CryptoJS/rollups/hmac-sha256.js"></script>
+  <script src="./assets/js/sdk/lib/CryptoJS/rollups/sha256.js"></script>
+  <script src="./assets/js/sdk/lib/CryptoJS/components/hmac.js"></script>
+  <script src="./assets/js/sdk/lib/CryptoJS/components/enc-base64.js"></script>
+  <script src="./assets/js/sdk/lib/url-template/url-template.js"></script>
+  <script src="./assets/js/sdk/lib/apiGatewayCore/sigV4Client.js"></script>
+  <script src="./assets/js/sdk/lib/apiGatewayCore/apiGatewayClient.js"></script>
+  <script src="./assets/js/sdk/lib/apiGatewayCore/simpleHttpClient.js"></script>
+  <script src="./assets/js/sdk/lib/apiGatewayCore/utils.js"></script>
+  <script src="./assets/js/sdk/apigClient.js"></script>
+  <!-- external CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="float-right">
+        <p><a href="search.html">Search</a></p>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>Upload</h1>
+  </div>
+
+  <div class="container">
+    <form name="myForm" id="myForm" action="/query" method="POST">
+        <div class="row">
+          <input id="imageFile" accept=".png, .jpg, .jpeg" type="file" name="imageFile" />
+        </div>
+        <div> <h3>Tags</h3> </div>
+        <div class="row">
+          <select multiple class="form-control" id="phototags">
+            <option value="Dog">Dog</option>
+            <option value="Cat">Cat</option>
+            <option value="Bird">Bird</option>
+            <option value="Horse">Horse</option>
+            <option value="Tiger">Tiger</option>
+            <option value="Turtle">Turtle</option>
+            <option value="Bed">Bed</option>
+            <option value="Table">Table</option>
+            <option value="Backyard">Backyard</option>
+            <option value="Beach">Beach</option>
+            <option value="Mountain">Mountain</option>
+            <option value="Lake">Lake</option>
+            <option value="Tree">Tree</option>
+            <option value="Rose">Rose</option>
+            <option value="Forest">Forest</option>
+          </select>
+        </div>
+        <div class="row">
+          <button type="submit" class="btn btn-success">upload</button>
+        </div>
+    </form>
+  </div>
+
+</html>
+<script>
+  var sdk = apigClientFactory.newClient({});
+  /* callback function for the ajax request
+     purpose:
+       update the UI to show a list of searching results
+     input:
+  /*   data: JSON returned from the server */
+  function showResult(data){
+    document.getElementById("myForm").reset();
+  }
+
+  function callUploadApi(filename, ctype, labels, data) {
+    // params, body, additionalParams
+    return sdk.uploadPut({
+      'filename': filename,
+      'Content-Type': 'text/html',
+      'filetype': ctype,
+      'x-amz-meta-customLabels': labels
+      }, data, {});
+  }
+
+  /* send form data by ajax */
+  $("#myForm").submit(function(e) {
+    e.preventDefault(); // avoid to execute the actual submit of the form.
+
+    if (!validateForm())  //before submitting, do some input validity check
+      return;
+
+    var file = $("#imageFile")[0].files[0];
+    if (file.size > 10*1024*1024)
+    {
+      alert('file size > 10 MB');
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.addEventListener("load", function (e) {
+      callUploadApi(file.name, file.type, $("#phototags").val().join(), reader.result.split(',')[1])
+      .then((response) => {
+        $(".btn").prop("disabled", false);  //disable the search button to prevent from submitting twice
+        document.getElementById("myForm").reset();
+        if (response.status != 200)
+          throw "upload fail";
+        console.log(response);
+      })
+      .catch((error) => {
+        console.log('an error occurred', error);
+        alert('Oops, something went wrong: '+error);
+      });
+    });
+    reader.readAsDataURL(file);
+    $(".btn").prop("disabled", true);
+  });
+
+  function convertDataURIToBinary(base64) {
+    var raw = atob(base64);
+    var rawLength = raw.length;
+    var array = new Uint8Array(new ArrayBuffer(rawLength));
+
+    for(i = 0; i < rawLength; i++) {
+      array[i] = raw.charCodeAt(i);
+    }
+    return array;
+  }
+
+  /* do some input check */
+  function validateForm() {
+    // check if the 'from' field is empty
+    var uploadfile = $("#imageFile");
+    if (uploadfile.val() == "") {
+      alert("You must choose a photo");
+      return false;
+    }
+    return true;
+  }
+</script>

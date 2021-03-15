@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Search</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- external javascript -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- api gateway generated sdk -->
+  <script src="./assets/js/sdk/lib/axios/dist/axios.standalone.js"></script>
+  <script src="./assets/js/sdk/lib/CryptoJS/rollups/hmac-sha256.js"></script>
+  <script src="./assets/js/sdk/lib/CryptoJS/rollups/sha256.js"></script>
+  <script src="./assets/js/sdk/lib/CryptoJS/components/hmac.js"></script>
+  <script src="./assets/js/sdk/lib/CryptoJS/components/enc-base64.js"></script>
+  <script src="./assets/js/sdk/lib/url-template/url-template.js"></script>
+  <script src="./assets/js/sdk/lib/apiGatewayCore/sigV4Client.js"></script>
+  <script src="./assets/js/sdk/lib/apiGatewayCore/apiGatewayClient.js"></script>
+  <script src="./assets/js/sdk/lib/apiGatewayCore/simpleHttpClient.js"></script>
+  <script src="./assets/js/sdk/lib/apiGatewayCore/utils.js"></script>
+  <script src="./assets/js/sdk/apigClient.js"></script>
+
+  <!-- external CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="float-right">
+        <p><a href="upload.html">Upload</a></p>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>Search</h1>
+  </div>
+
+  <div class="container">
+    <form name="myForm" id="myForm" action="/search" method="GET">
+        <div class="row">
+            <input id="transcript" type="text" size="50"  />
+            <button id="start-button" class="btn" title="Start Transcription">
+              <i class="fa fa-microphone"></i>
+          </button>
+          <button id="stop-button" class="btn" title="Stop Transcription" disabled="true">
+            <i class="fa fa-stop-circle"></i>
+          </button>
+        </div>
+        <div class="row">
+          <button type="submit" class="btn btn-success">search</button>
+        </div>
+    </form>
+  </div>
+
+  <div class="container">
+    <div class="row">
+        <div class="col">
+            <input type="password" id="access_id" placeholder="ACCESS ID" value="AKIAUNICGYXWJANSOPGV" hidden />
+            <input type="password" id="secret_key" placeholder="SECRET KEY" value="x4jsdojlqBFvXLhnmd3M8Zy1i2bLQ8fqkskT6B7c" hidden/>
+            <input type="password" id="session_token" placeholder="SESSION TOKEN" value="" hidden/>
+        </div>
+        <div class="col">
+            <select id="language" hidden>
+                <optgroup label="English" >
+                    <option value="en-US">US English (en-US)</option>
+                </optgroup>
+            </select>
+            <select id="region" hidden>
+                <option value="us-east-1">US East (N. Virginia)</option>
+            </select>
+        </div>
+    </div>
+  </div>
+
+
+  <div class="container">
+    <div class="row" id="album">
+
+    </div>
+  </div>
+
+</html>
+<script>
+  var sdk = apigClientFactory.newClient({});
+  /* callback function for the ajax request
+     purpose:
+       update the UI to show a list of searching results
+     input:
+  /*   data: JSON returned from the server */
+  function showResult(data){
+    document.getElementById("myForm").reset();
+  }
+
+  function callSearchApi(querystring) {
+    // params, body, additionalParams
+    return sdk.searchGet({
+      'q': querystring
+      }, null, {});
+  }
+
+  /* send form data by ajax */
+  $("#myForm").submit(function(e) {
+    e.preventDefault(); // avoid to execute the actual submit of the form.
+
+    if (!validateForm())  //before submitting, do some input validity check
+      return;
+
+    var query = $("#transcript").val();
+
+    callSearchApi(query)
+    .then((response) => {
+      if (response.status != 200)
+        throw "search fail";
+      console.log(response);
+
+      var data = response.data;
+      var images = data.body;
+
+      console.log(images)
+      $("#album").empty();
+      for (var f of images) {
+        $(getDiv(f)).prependTo("#album");
+      }
+    })
+    .catch((error) => {
+      console.log('an error occurred', error.data.errorMessage);
+      alert('Oops, something went wrong: '+error.data.errorMessage);
+    });
+  });
+
+  /* do some input check */
+  function validateForm() {
+    // check if the 'from' field is empty
+    var uploadfile = $("#querystring");
+    if (uploadfile.val() == "") {
+      alert("You must enter a query");
+      return false;
+    }
+    return true;
+  }
+
+  function getDiv(src){
+    var img_element = '<img src="https://s3.amazonaws.com/' + src + '"  width="100%"/>'
+
+    var str =
+    '<div class="col-4">' +
+      '<div class="w3-container" style="margin-top:30px;margin-bottom:30px">' +
+        '<div>' +
+          '<div id="container-photo">' + img_element + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    return str;
+  }
+</script>
+<script src="./assets/js/transcribe/dist/main.js"></script>
